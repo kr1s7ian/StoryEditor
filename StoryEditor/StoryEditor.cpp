@@ -1,7 +1,4 @@
-﻿// ConsoleApplication1.cpp : Questo file contiene la funzione 'main', in cui inizia e termina l'esecuzione del programma.
-//
-
-#include <iostream>
+﻿#include <iostream>
 #include <windows.h>
 #include <vector>
 #include <string>
@@ -19,7 +16,7 @@ std::map<int, scenario> cachedScenarios;
 
 std::vector<std::string> Tokenize(const std::string& str) {
     std::cout << str << "\n";
-    std::vector<std::string> words;
+    std::vector<std::string> tokens;
     int count = 0;
     for (const auto c : str) {
         if (c == '"') {
@@ -30,32 +27,29 @@ std::vector<std::string> Tokenize(const std::string& str) {
     // if count is not even
     if (count % 2 != 0) {
         std::cout << "input is not even!" << "\n";
-        return words;
+        return tokens;
     }
 
-    std::string word;
+    std::string token;
     int count2 = 0;
-    for (const auto c : str) {
+    for (const auto& c : str) {
         if (c != '"') {
-            if (count2 % 2 == false && c == ' ') {
-
+            if (count2 % 2 != 0) {
+                token += c;
             }
-            else {
-                word += c;
-            }
-
         }
         else {
-            if (count2 % 2 == true) {
-                std::cout << "test: " << word << "\n";
-                words.push_back(word);
-                word = "";
+            // if " amount is even then the line is correctly formatted and can be pushed into tokens, after that we clear the token string
+            if (count2 % 2 != 0) {
+                std::cout << "loading: " << token << "\n";
+                tokens.push_back(token);
+                token = "";
             }
             count2++;
         }
     }
 
-    return words;
+    return tokens;
 }
 
 struct choice {
@@ -86,6 +80,7 @@ struct scenario {
 scenario stringToScenario(const std::string& str) {
     std::vector<std::string> tokens = Tokenize(str);
     scenario scn(stoi(tokens[0]), tokens[1], {});
+    // only if tokens size is greater than 2 then it has choices so if its less than 2 we dont need to load them.
     if (tokens.size() > 2) {
         for (int i = 2; i < tokens.size(); i += 2) {
             scn.choices.push_back(choice(tokens[i], stoi(tokens[i + 1])));
@@ -112,8 +107,8 @@ std::string scenarioToString(const scenario& scn) {
 
 std::vector<std::string> loadFile() {
     std::vector<std::string> lines;
-
     std::string line;
+
     std::fstream file("mystory.txt");
     while (std::getline(file, line, ';')) {
         lines.push_back(line);
@@ -125,8 +120,8 @@ std::vector<std::string> loadFile() {
 
 void saveFile() {
     std::ofstream file("mystory.txt");
-
     std::string line;
+
     for (const auto& scn : cachedScenarios) {
         line = scenarioToString(scn.second);
         file << "\n" << line;
@@ -215,12 +210,12 @@ bool validateInput(const std::string& str, int max) {
 }
 
 void runScenario(int id) {
-    scenario scn = cachedScenarios.at(id);
+    scenario& scn = cachedScenarios.at(id);
     system("cls");
     std::cout << scn.description << "\n";
     std::cout << "\n";
     int n = 1;
-    for (auto& choice : scn.choices) {
+    for (const auto& choice : scn.choices) {
         std::cout << n++ << "] ";
         std::cout << choice.name << "\n";
     }
@@ -236,6 +231,7 @@ void runScenario(int id) {
         }
     }
     else {
+        //if input was not valid re run the current scenario
         runScenario(id);
     }
 }
@@ -254,7 +250,6 @@ int generateRandomUniqueId() {
 
 int main()
 {
-    srand(time(NULL));
     lines = loadFile();
     cachedScenarios = cacheScenarios(lines);
     runScenario(0);
